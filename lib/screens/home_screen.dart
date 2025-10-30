@@ -100,91 +100,135 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, wallet, child) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('D30 Wallet'),
-            actions: [
-              if (wallet.isConnected)
-                IconButton(
-                  icon: wallet.isFetchingBalance
-                      ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                      : const Icon(Icons.refresh),
-                  onPressed: wallet.isFetchingBalance ? null : wallet.fetchBalance,
-                ),
-              if (wallet.isConnected)
-                IconButton(
-                  icon: const Icon(Icons.logout),
+            title: const Text('My Dashboard'),
 
-                  onPressed: () async {
-                    await _appKitModal.disconnect(); 
-                  },
-                ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.account_circle),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Halaman profil mockup')),
+                  );
+                },
+              ),
             ],
           ),
-          body: Center(
-            child: wallet.isConnected
-                ? _buildWalletInfo(context, wallet)
-                : _buildConnectButton(context, wallet), 
+
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              Navigator.pushNamed(context, '/qr_scanner');
+            },
+            backgroundColor: Colors.blue,
+            child: const Icon(Icons.qr_code_scanner, color: Colors.white),
           ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+
+          bottomNavigationBar: BottomAppBar(
+            shape: const CircularNotchedRectangle(),
+            notchMargin: 6.0,
+            child: Container(height: 60.0), 
+          ),
+
+          body: _buildDashboardBody(context, wallet),
         );
       },
     );
   }
 
-  Widget _buildWalletInfo(BuildContext context, WalletService wallet) {
+  Widget _buildDashboardBody(BuildContext context, WalletService wallet) {
+    if (_isInitializing) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      children: [
 
-         children: [
-          const Text('Wallet Terhubung:', style: TextStyle(fontSize: 18)),
-          const SizedBox(height: 8),
-          Text(
-            wallet.address ?? 'N/A',
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          const Text('Saldo Anda:', style: TextStyle(fontSize: 18)),
-          const SizedBox(height: 8),
-          if (wallet.isFetchingBalance && wallet.usdcBalance == 0.0)
-            const CircularProgressIndicator()
-          else
-            Text(
-              '${wallet.usdcBalance.toStringAsFixed(2)} USDC',
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-            ),
-          const SizedBox(height: 40),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-            icon: const Icon(Icons.qr_code_scanner),
-            label: const Text('Pindai QR untuk Membayar'),
-            onPressed: () {
+        _buildBalanceCard(context, wallet),
+        const SizedBox(height: 24),
 
-            },
+        const Text('Grafik Saldo (Mockup)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Container(
+          height: 150,
+          decoration: BoxDecoration(
+            color: Colors.grey[800],
+            borderRadius: BorderRadius.circular(12),
           ),
-        ],
+          child: const Center(
+            child: Icon(Icons.show_chart, color: Colors.grey, size: 50),
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        const Text('Riwayat Transaksi (Mockup)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        _buildMockHistoryTile(Icons.shopping_bag, 'Warung Kopi Jaya', '- Rp 15.000'),
+        _buildMockHistoryTile(Icons.fastfood, 'Sate Padang', '- Rp 25.000'),
+        _buildMockHistoryTile(Icons.receipt, 'Token Listrik', '- Rp 50.000'),
+      ],
+    );
+  }
+
+  Widget _buildBalanceCard(BuildContext context, WalletService wallet) {
+    return Card(
+      color: Colors.grey[850],
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Total Saldo (USDC)', style: TextStyle(fontSize: 16, color: Colors.grey)),
+            const SizedBox(height: 8),
+
+            if (wallet.isConnected)
+              Text(
+                '${wallet.usdcBalance.toStringAsFixed(2)} USDC',
+                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+              )
+            else
+
+              const Text(
+                '125.50 USDC', 
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+
+            const SizedBox(height: 20),
+
+            wallet.isConnected
+              ? Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        wallet.address ?? 'N/A',
+                        style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.logout, size: 20, color: Colors.red),
+                      onPressed: () async => await _appKitModal.disconnect(),
+                    )
+                  ],
+                )
+              : _buildConnectButton(context, wallet), 
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildConnectButton(BuildContext context, WalletService wallet) {
-    if (_isInitializing) {
-      return const CircularProgressIndicator(); 
-    }
-
     return ElevatedButton(
-      child: const Text('Connect Wallet'),
+      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
       onPressed: () {
-
         showModalBottomSheet(
           context: context,
           backgroundColor: Colors.transparent,
           builder: (sheetContext) {
-
             return Container(
               padding: const EdgeInsets.all(16),
               decoration: const BoxDecoration(
@@ -198,6 +242,19 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         );
       },
+      child: const Text('Connect Wallet to See Real Balance'),
+    );
+  }
+
+  Widget _buildMockHistoryTile(IconData icon, String title, String amount) {
+    return Card(
+      color: Colors.grey[850],
+      margin: const EdgeInsets.symmetric(vertical: 4.0),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.blue),
+        title: Text(title),
+        trailing: Text(amount, style: const TextStyle(color: Colors.red)),
+      ),
     );
   }
 }
